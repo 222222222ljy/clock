@@ -1,40 +1,38 @@
-module top(clk_sys,K,seq,clk,dig);
+module tik(clk_sys,in,num,out,K);
+    //clk 时钟,in输入触发,num次数,out输出,K是模式
     parameter freq=12000000;
-    parameter HR=24,MN=60,SE=60;
-    
+
     input wire clk_sys;
-    input wire [3:0]K;
+    input wire in;
+    input wire [6:0] K;
+    input wire [7:0] num;
+    output reg [5:0] out; 
     
-    wire [1:0] val=K[1:0];
+    reg inl=0;
+    reg [5:0] res=0;
+    reg [26:0] now=0;
+    always @(posedge clk_sys)begin
+        if(in==1&&inl==0)res=num;
+        if(res>0)begin
+            now=now+1;
+            if(now==freq/2)out=63;
+            if(now==freq)begin
+                out=K;
+                res=res-1;
+                now=0;
+            end
+        end
+        else out=K;
+        inl=in;
+    end
+endmodule
     
-    wire upo_mn,upo_hr,upi_mn,upi_hr;
-    wire [1:0] val_hr=(K[3]==1'b0)?val:2'b11;
-    wire [1:0] val_mn=(K[3]==1'b1)?val:2'b11;
-    wire [1:0] val_se=2'b11;
-    wire [7:0] now_mn,now_hr,now_se;
-    
-    output wire clk;
-    wire secs;
-    
-    clock_timer clock_se(.div(freq),.clk(clk_sys),.upo(clk));
-    clock_timer sec(.div(freq),.clk(clk_sys),.upo(secs));
-    
-    clock_number se(.val(vel_se),.term(SE),
-        .upi(secs),.upo(upi_mn),
-        .now(now_se),clk_sys(clk_sys));
-    
-    clock_number mn(.val(val_mn),.term(MN),
-        .upi(upi_mn),.upo(upo_mn),
-        .now(now_mn),.clk_sys(clk_sys));
-    
-    clock_number hr(.val(val_hr),.term(HR),
-        .upi(upo_mn),.upo(upo_hr),
-        .now(now_hr),.clk_sys(clk_sys));
-        
-    output wire [13:0] seq;
-    output wire [1:0] dig;
-    assign dig=2'b00;
-    
-    display dis(.clk(clk_sys),.now_hr(now_hr),.now_mn(now_mn),.K(K[3]),.seg(seq));
-    
+module mode_change(K,out,clk_sys);
+    input wire K;
+    input wire clk_sys;
+    output reg [5:0] out=0;
+    always @(posedge clk_sys)begin
+        if(K==0)out=out+1;
+        if(out==63)out=0;
+    end
 endmodule
